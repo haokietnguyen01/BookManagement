@@ -12,11 +12,13 @@ cmake ..
 
 make -j4
 
+cd ..
+
 echo "======================================"
 echo "------------Run Executable------------"
 echo "======================================"
 
-./BookManagement
+./build/BookManagement
 
 
 

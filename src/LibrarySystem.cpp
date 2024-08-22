@@ -18,24 +18,34 @@ void LibrarySystem::loadItemsFromFile(const std::string &filename,
 
   std::string line;
   while (std::getline(file, line)) {
-    // Xử lý từng dòng và tạo đối tượng Item phù hợp
+    std::istringstream iss(line);
     if (isUserFile) {
-      // Đọc thông tin người dùng và tạo đối tượng User
+      // Read user information
       std::string id, name, email, phone;
-      std::istringstream iss(line);
       std::getline(iss, id, ',');
       std::getline(iss, name, ',');
       std::getline(iss, email, ',');
       std::getline(iss, phone, ',');
 
       auto user = std::make_shared<User>(id, name, email, phone);
+
+      // Read borrowed books
+      std::string borrowedBooksStr;
+      if (std::getline(iss, borrowedBooksStr, ',')) {
+        std::istringstream borrowedBooksStream(borrowedBooksStr);
+        std::string bookId;
+        while (std::getline(borrowedBooksStream, bookId, ';')) {
+          user->addBorrowedBook(bookId,
+                                *this); // Assuming this refers to LibrarySystem
+        }
+      }
+
       addItem(user);
     } else {
-      // Đọc thông tin sách và tạo đối tượng Book
+      // Read book information
       std::string id, title, author, category;
       int year;
       bool available;
-      std::istringstream iss(line);
       std::getline(iss, id, ',');
       std::getline(iss, title, ',');
       std::getline(iss, author, ',');
@@ -64,7 +74,17 @@ void LibrarySystem::saveItemsToFile(const std::string &filename,
     if (isUserFile && std::dynamic_pointer_cast<User>(item)) {
       auto user = std::dynamic_pointer_cast<User>(item);
       file << user->getId() << "," << user->getName() << "," << user->getEmail()
-           << "," << user->getPhone() << "\n";
+           << "," << user->getPhone() << ",";
+
+      // Save borrowed books
+      const auto &borrowedBooks = user->getBorrowedBooks();
+      for (size_t i = 0; i < borrowedBooks.size(); ++i) {
+        file << borrowedBooks[i];
+        if (i < borrowedBooks.size() - 1) {
+          file << ";"; // Separator between borrowed books
+        }
+      }
+      file << "\n";
     } else if (!isUserFile && std::dynamic_pointer_cast<Book>(item)) {
       auto book = std::dynamic_pointer_cast<Book>(item);
       file << book->getId() << "," << book->getTitle() << ","
@@ -114,8 +134,8 @@ bool LibrarySystem::borrowBook(const std::string &userId,
   if (user && book && book->isAvailable()) {
     user->addBorrowedBook(bookId, *this);
     book->setAvailable(false);
-    saveItemsToFile("books.txt", false); // Cập nhật file sách
-    saveItemsToFile("users.txt", true);  // Cập nhật file người dùng
+    saveItemsToFile("./database/books.txt", false); // Cập nhật file sách
+    saveItemsToFile("./database/users.txt", true); // Cập nhật file người dùng
     return true;
   }
   return false;
@@ -129,8 +149,8 @@ bool LibrarySystem::returnBook(const std::string &userId,
   if (user && book && !book->isAvailable()) {
     user->removeBorrowedBook(bookId);
     book->setAvailable(true);
-    saveItemsToFile("books.txt", false); // Cập nhật file sách
-    saveItemsToFile("users.txt", true);  // Cập nhật file người dùng
+    saveItemsToFile("./database/books.txt", false); // Cập nhật file sách
+    saveItemsToFile("./database/users.txt", true); // Cập nhật file người dùng
     return true;
   }
   return false;
