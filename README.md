@@ -16,7 +16,15 @@ The Book Management System provides features for adding books, adding users, bor
 - `src/Book.cpp`, `src/Book.hpp`: Definitions and implementations for the `Book` class.
 - `src/User.cpp`, `src/User.hpp`: Definitions and implementations for the `User` class.
 - `src/LibrarySystem.cpp`, `src/LibrarySystem.hpp`: Definitions and implementations for the `LibrarySystem` class to manage books and users.
+- `include/Item.hpp`: Abstract base class representing an item with an ID and display functionality, used as a base for different types of items within the library system.
 - `include/`: Directory containing header files.
+- `database/`: Contains data files for storing book and user information.
+
+## Multithreading
+
+The Book Management System utilizes multithreading to simultaneously handle operations like borrowing and returning books. This method improves application responsiveness by executing tasks concurrently, including:
+- `Borrowing Books`: One thread manages the borrowing operation while another thread handles the display of results.
+- `Returning Books`: Similarly, one thread processes the return operation, and another manages the result display.
 
 ## Data Files
 
