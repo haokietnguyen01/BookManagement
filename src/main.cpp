@@ -7,6 +7,7 @@
 #include <iostream>
 #include <memory>
 #include <string>
+#include <thread>
 #include <vector>
 
 void displayMenu() {
@@ -20,7 +21,7 @@ void displayMenu() {
   std::cout << "7. Print All Users\n";
   std::cout << "8. Get Most Borrowed Books\n";
   std::cout << "9. Get Overdue Books\n";
-  std::cout << "10. Test Set Borrowed Book Date\n"; // Updated case for testing
+  std::cout << "10. Test Set Borrowed Book Date\n";
   std::cout << "0. Exit\n";
 }
 
@@ -103,13 +104,47 @@ int main() {
       std::cout << "Enter book ID: ";
       std::getline(std::cin, bookId);
 
-      if (librarySystem.borrowBook(userId, bookId)) {
-        std::cout << "Book borrowed successfully.\n";
-      } else {
-        std::cout << "Failed to borrow book.\n";
-      }
+      bool success = false;
+      std::shared_ptr<Book> borrowedBook;
+
+      std::thread borrowThread(
+          [&librarySystem, userId, bookId, &success, &borrowedBook]() {
+            success = librarySystem.borrowBook(userId, bookId);
+            if (success) {
+              borrowedBook = librarySystem.findBookById(bookId);
+            }
+          });
+
+      borrowThread.join();
+
+      std::thread printThread([success, borrowedBook, bookId]() {
+        if (success) {
+          std::cout << "Book borrowed successfully.\n";
+          if (borrowedBook) {
+            std::cout << "Details of the borrowed book:\n";
+            std::cout << "Book ID: " << std::setw(10) << borrowedBook->getId()
+                      << ", Title: " << std::setw(20)
+                      << borrowedBook->getTitle()
+                      << ", Author: " << std::setw(20)
+                      << borrowedBook->getAuthor()
+                      << ", Category: " << std::setw(15)
+                      << borrowedBook->getCategory()
+                      << ", Year: " << std::setw(4) << borrowedBook->getYear()
+                      << ", Available: "
+                      << (borrowedBook->isAvailable() ? "Yes" : "No") << "\n";
+          } else {
+            std::cout << "Book with ID " << bookId << " not found.\n";
+          }
+        } else {
+          std::cout << "Failed to borrow book.\n";
+        }
+      });
+
+      printThread.join();
+
       break;
     }
+
     case 4: {
       // Return book
       std::string userId, bookId;
@@ -119,15 +154,47 @@ int main() {
       std::cout << "Enter book ID: ";
       std::getline(std::cin, bookId);
 
-      if (librarySystem.returnBook(userId, bookId)) {
-        std::cout << "Book returned successfully.\n";
-      } else {
-        std::cout << "Failed to return book.\n";
-      }
+      bool success = false;
+      std::shared_ptr<Book> returnedBook;
+
+      std::thread returnThread(
+          [&librarySystem, userId, bookId, &success, &returnedBook]() {
+            success = librarySystem.returnBook(userId, bookId);
+            if (success) {
+              returnedBook = librarySystem.findBookById(bookId);
+            }
+          });
+
+      returnThread.join();
+
+      std::thread printThread([success, returnedBook, bookId]() {
+        if (success) {
+          std::cout << "Book returned successfully.\n";
+          if (returnedBook) {
+            std::cout << "Details of the returned book:\n";
+            std::cout << "Book ID: " << std::setw(10) << returnedBook->getId()
+                      << ", Title: " << std::setw(20)
+                      << returnedBook->getTitle()
+                      << ", Author: " << std::setw(20)
+                      << returnedBook->getAuthor()
+                      << ", Category: " << std::setw(15)
+                      << returnedBook->getCategory()
+                      << ", Year: " << std::setw(4) << returnedBook->getYear()
+                      << ", Available: "
+                      << (returnedBook->isAvailable() ? "Yes" : "No") << "\n";
+          } else {
+            std::cout << "Book with ID " << bookId << " not found.\n";
+          }
+        } else {
+          std::cout << "Failed to return book.\n";
+        }
+      });
+
+      printThread.join();
+
       break;
     }
     case 5: {
-      // Search books
       std::string query, type;
 
       std::cout << "Enter search query: ";
