@@ -27,6 +27,7 @@ public:
   getBorrowDate(const std::string &bookId) const;
   void setBorrowedBookDate(const std::string &bookId,
                            const std::chrono::system_clock::time_point &date);
+  bool hasBorrowedBook(const std::string &bookId) const;
 
 private:
   std::string id;

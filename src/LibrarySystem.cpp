@@ -4,6 +4,8 @@
 #include <iostream>
 #include <sstream>
 
+std::mutex libraryMutex;
+
 void LibrarySystem::addItem(const std::shared_ptr<Item> &item) {
   items.push_back(item);
 }
@@ -128,6 +130,8 @@ void LibrarySystem::printLibraryItems(int flag) const {
 
 bool LibrarySystem::borrowBook(const std::string &userId,
                                const std::string &bookId) {
+  std::lock_guard<std::mutex> lock(libraryMutex);
+
   auto user = findUserById(userId);
   auto book = findBookById(bookId);
 
@@ -143,16 +147,26 @@ bool LibrarySystem::borrowBook(const std::string &userId,
 
 bool LibrarySystem::returnBook(const std::string &userId,
                                const std::string &bookId) {
+  std::lock_guard<std::mutex> lock(libraryMutex);
+
   auto user = findUserById(userId);
   auto book = findBookById(bookId);
 
-  if (user && book && !book->isAvailable()) {
+  if (!user || !book) {
+    // Nếu không tìm thấy người dùng hoặc sách, trả về false
+    return false;
+  }
+
+  // Kiểm tra nếu sách hiện tại đã mượn và người dùng đã mượn sách đó
+  if (!book->isAvailable() && user->hasBorrowedBook(bookId)) {
     user->removeBorrowedBook(bookId);
     book->setAvailable(true);
     saveItemsToFile("./database/books.txt", false); // Cập nhật file sách
     saveItemsToFile("./database/users.txt", true); // Cập nhật file người dùng
     return true;
   }
+
+  // Nếu sách không được mượn hoặc người dùng không mượn sách đó
   return false;
 }
 
@@ -266,4 +280,20 @@ LibrarySystem::getOverdueBooks(int days) const {
 
 const std::vector<std::shared_ptr<Item>> &LibrarySystem::getItems() const {
   return items;
+}
+
+bool LibrarySystem::hasBorrowedBook(const std::string &userId,
+                                    const std::string &bookId) const {
+  std::lock_guard<std::mutex> lock(libraryMutex);
+
+  // Tìm người dùng theo userId
+  auto user = findUserById(userId);
+  if (!user) {
+    // Nếu không tìm thấy người dùng
+    return false;
+  }
+
+  // Kiểm tra xem sách với bookId có nằm trong danh sách sách đã mượn của người
+  // dùng không
+  return user->hasBorrowedBook(bookId);
 }

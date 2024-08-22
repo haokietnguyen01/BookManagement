@@ -29,6 +29,9 @@ public:
   std::vector<std::shared_ptr<Book>> getOverdueBooks(int days) const;
   const std::vector<std::shared_ptr<Item>> &getItems() const;
 
+  bool hasBorrowedBook(const std::string &userId,
+                       const std::string &bookId) const;
+
 private:
   std::vector<std::shared_ptr<Item>> items;
 };

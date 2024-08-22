@@ -66,3 +66,8 @@ void User::setBorrowedBookDate(
     throw std::runtime_error("Book not borrowed by this user");
   }
 }
+
+bool User::hasBorrowedBook(const std::string &bookId) const {
+  return std::find(borrowedBooks.begin(), borrowedBooks.end(), bookId) !=
+         borrowedBooks.end();
+}
