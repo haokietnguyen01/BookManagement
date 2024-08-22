@@ -1,15 +1,21 @@
 #include "LibrarySystem.hpp"
+#include <algorithm>
 #include <chrono>
 #include <fstream>
 #include <iostream>
+#include <mutex>
 #include <sstream>
+#include <unordered_map>
 
+// Mutex to ensure thread safety in library operations.
 std::mutex libraryMutex;
 
+// Adds an item (book or user) to the library system.
 void LibrarySystem::addItem(const std::shared_ptr<Item> &item) {
   items.push_back(item);
 }
 
+// Loads items (books or users) from a file into the library system.
 void LibrarySystem::loadItemsFromFile(const std::string &filename,
                                       bool isUserFile) {
   std::ifstream file(filename);
@@ -22,7 +28,7 @@ void LibrarySystem::loadItemsFromFile(const std::string &filename,
   while (std::getline(file, line)) {
     std::istringstream iss(line);
     if (isUserFile) {
-      // Read user information
+      // Read user information.
       std::string id, name, email, phone;
       std::getline(iss, id, ',');
       std::getline(iss, name, ',');
@@ -31,20 +37,19 @@ void LibrarySystem::loadItemsFromFile(const std::string &filename,
 
       auto user = std::make_shared<User>(id, name, email, phone);
 
-      // Read borrowed books
+      // Read borrowed books.
       std::string borrowedBooksStr;
       if (std::getline(iss, borrowedBooksStr, ',')) {
         std::istringstream borrowedBooksStream(borrowedBooksStr);
         std::string bookId;
         while (std::getline(borrowedBooksStream, bookId, ';')) {
-          user->addBorrowedBook(bookId,
-                                *this); // Assuming this refers to LibrarySystem
+          user->addBorrowedBook(bookId, *this); // Adds borrowed book.
         }
       }
 
       addItem(user);
     } else {
-      // Read book information
+      // Read book information.
       std::string id, title, author, category;
       int year;
       bool available;
@@ -64,6 +69,7 @@ void LibrarySystem::loadItemsFromFile(const std::string &filename,
   file.close();
 }
 
+// Saves items (books or users) from the library system to a file.
 void LibrarySystem::saveItemsToFile(const std::string &filename,
                                     bool isUserFile) const {
   std::ofstream file(filename);
@@ -78,12 +84,12 @@ void LibrarySystem::saveItemsToFile(const std::string &filename,
       file << user->getId() << "," << user->getName() << "," << user->getEmail()
            << "," << user->getPhone() << ",";
 
-      // Save borrowed books
+      // Save borrowed books.
       const auto &borrowedBooks = user->getBorrowedBooks();
       for (size_t i = 0; i < borrowedBooks.size(); ++i) {
         file << borrowedBooks[i];
         if (i < borrowedBooks.size() - 1) {
-          file << ";"; // Separator between borrowed books
+          file << ";"; // Separator between borrowed books.
         }
       }
       file << "\n";
@@ -97,12 +103,13 @@ void LibrarySystem::saveItemsToFile(const std::string &filename,
   file.close();
 }
 
+// Prints details of library items based on the flag.
 void LibrarySystem::printLibraryItems(int flag) const {
   for (const auto &item : items) {
     if (flag == 0) {
       std::shared_ptr<User> user = std::dynamic_pointer_cast<User>(item);
       if (user) {
-        // In thông tin người dùng
+        // Print user information.
         std::cout << "User ID: " << user->getId()
                   << ", Name: " << user->getName()
                   << ", Email: " << user->getEmail()
@@ -115,7 +122,7 @@ void LibrarySystem::printLibraryItems(int flag) const {
     } else if (flag == 1) {
       std::shared_ptr<Book> book = std::dynamic_pointer_cast<Book>(item);
       if (book) {
-        // In thông tin sách
+        // Print book information.
         std::cout << "Book ID: " << book->getId()
                   << ", Title: " << book->getTitle()
                   << ", Author: " << book->getAuthor()
@@ -128,6 +135,7 @@ void LibrarySystem::printLibraryItems(int flag) const {
   }
 }
 
+// Handles borrowing a book for a user.
 bool LibrarySystem::borrowBook(const std::string &userId,
                                const std::string &bookId) {
   std::lock_guard<std::mutex> lock(libraryMutex);
@@ -138,13 +146,14 @@ bool LibrarySystem::borrowBook(const std::string &userId,
   if (user && book && book->isAvailable()) {
     user->addBorrowedBook(bookId, *this);
     book->setAvailable(false);
-    saveItemsToFile("./database/books.txt", false); // Cập nhật file sách
-    saveItemsToFile("./database/users.txt", true); // Cập nhật file người dùng
+    saveItemsToFile("./database/books.txt", false); // Update book file.
+    saveItemsToFile("./database/users.txt", true);  // Update user file.
     return true;
   }
   return false;
 }
 
+// Handles returning a book from a user.
 bool LibrarySystem::returnBook(const std::string &userId,
                                const std::string &bookId) {
   std::lock_guard<std::mutex> lock(libraryMutex);
@@ -153,23 +162,23 @@ bool LibrarySystem::returnBook(const std::string &userId,
   auto book = findBookById(bookId);
 
   if (!user || !book) {
-    // Nếu không tìm thấy người dùng hoặc sách, trả về false
+    // If user or book not found, return false.
     return false;
   }
 
-  // Kiểm tra nếu sách hiện tại đã mượn và người dùng đã mượn sách đó
   if (!book->isAvailable() && user->hasBorrowedBook(bookId)) {
     user->removeBorrowedBook(bookId);
     book->setAvailable(true);
-    saveItemsToFile("./database/books.txt", false); // Cập nhật file sách
-    saveItemsToFile("./database/users.txt", true); // Cập nhật file người dùng
+    saveItemsToFile("./database/books.txt", false); // Update book file.
+    saveItemsToFile("./database/users.txt", true);  // Update user file.
     return true;
   }
 
-  // Nếu sách không được mượn hoặc người dùng không mượn sách đó
+  // If book was not borrowed or user does not have it, return false.
   return false;
 }
 
+// Finds a user by their ID.
 std::shared_ptr<User>
 LibrarySystem::findUserById(const std::string &userId) const {
   for (const auto &item : items) {
@@ -182,6 +191,7 @@ LibrarySystem::findUserById(const std::string &userId) const {
   return nullptr;
 }
 
+// Finds a book by its ID.
 std::shared_ptr<Book>
 LibrarySystem::findBookById(const std::string &bookId) const {
   for (const auto &item : items) {
@@ -194,6 +204,7 @@ LibrarySystem::findBookById(const std::string &bookId) const {
   return nullptr;
 }
 
+// Searches for books based on the query and type (title, author, or category).
 std::vector<std::shared_ptr<Book>>
 LibrarySystem::searchBooks(const std::string &query,
                            const std::string &type) const {
@@ -213,6 +224,7 @@ LibrarySystem::searchBooks(const std::string &query,
   return results;
 }
 
+// Returns the top N most borrowed books.
 std::vector<std::shared_ptr<Book>>
 LibrarySystem::getMostBorrowedBooks(int topN) const {
   std::unordered_map<std::string, int> borrowCount;
@@ -226,10 +238,10 @@ LibrarySystem::getMostBorrowedBooks(int topN) const {
 
   std::vector<std::pair<std::string, int>> borrowVec(borrowCount.begin(),
                                                      borrowCount.end());
-  std::sort(borrowVec.begin(), borrowVec.end(),
-            [](const auto &a, const auto &b) {
-              return b.second < a.second; // Sắp xếp giảm dần theo số lần mượn
-            });
+  std::sort(
+      borrowVec.begin(), borrowVec.end(), [](const auto &a, const auto &b) {
+        return b.second < a.second; // Sort by borrow count in descending order.
+      });
 
   std::vector<std::shared_ptr<Book>> mostBorrowedBooks;
   for (int i = 0; i < topN && i < borrowVec.size(); ++i) {
@@ -245,6 +257,7 @@ LibrarySystem::getMostBorrowedBooks(int topN) const {
   return mostBorrowedBooks;
 }
 
+// Returns books that are overdue by a specified number of days.
 std::vector<std::shared_ptr<Book>>
 LibrarySystem::getOverdueBooks(int days) const {
   std::vector<std::shared_ptr<Book>> overdueBooks;
@@ -258,7 +271,7 @@ LibrarySystem::getOverdueBooks(int days) const {
           auto duration =
               std::chrono::duration_cast<std::chrono::hours>(now - borrowDate)
                   .count();
-          int daysOverdue = duration / 24; // Convert hours to days
+          int daysOverdue = duration / 24; // Convert hours to days.
           if (daysOverdue > days) {
             for (const auto &item : items) {
               if (auto book = std::dynamic_pointer_cast<Book>(item)) {
@@ -278,22 +291,23 @@ LibrarySystem::getOverdueBooks(int days) const {
   return overdueBooks;
 }
 
+// Returns all items in the library system.
 const std::vector<std::shared_ptr<Item>> &LibrarySystem::getItems() const {
   return items;
 }
 
+// Checks if a user has borrowed a specific book.
 bool LibrarySystem::hasBorrowedBook(const std::string &userId,
                                     const std::string &bookId) const {
   std::lock_guard<std::mutex> lock(libraryMutex);
 
-  // Tìm người dùng theo userId
+  // Find user by userId.
   auto user = findUserById(userId);
   if (!user) {
-    // Nếu không tìm thấy người dùng
+    // If user not found, return false.
     return false;
   }
 
-  // Kiểm tra xem sách với bookId có nằm trong danh sách sách đã mượn của người
-  // dùng không
+  // Check if the book is in the user's borrowed books.
   return user->hasBorrowedBook(bookId);
 }

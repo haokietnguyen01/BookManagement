@@ -21,7 +21,7 @@ void displayMenu() {
   std::cout << "7. Print All Users\n";
   std::cout << "8. Get Most Borrowed Books\n";
   std::cout << "9. Get Overdue Books\n";
-  std::cout << "10. Test Set Borrowed Book Date\n"; // Updated case for testing
+  std::cout << "10. Test Set Borrowed Book Date\n";
   std::cout << "0. Exit\n";
 }
 
@@ -104,11 +104,9 @@ int main() {
       std::cout << "Enter book ID: ";
       std::getline(std::cin, bookId);
 
-      // Các biến để lưu kết quả
       bool success = false;
       std::shared_ptr<Book> borrowedBook;
 
-      // Luồng để xử lý việc mượn sách
       std::thread borrowThread(
           [&librarySystem, userId, bookId, &success, &borrowedBook]() {
             success = librarySystem.borrowBook(userId, bookId);
@@ -117,9 +115,8 @@ int main() {
             }
           });
 
-      borrowThread.join(); // Chờ luồng mượn sách hoàn tất
+      borrowThread.join();
 
-      // Luồng để in thông báo
       std::thread printThread([success, borrowedBook, bookId]() {
         if (success) {
           std::cout << "Book borrowed successfully.\n";
@@ -143,7 +140,7 @@ int main() {
         }
       });
 
-      printThread.join(); // Chờ luồng in thông báo hoàn tất
+      printThread.join();
 
       break;
     }
@@ -157,11 +154,9 @@ int main() {
       std::cout << "Enter book ID: ";
       std::getline(std::cin, bookId);
 
-      // Các biến để lưu kết quả
       bool success = false;
       std::shared_ptr<Book> returnedBook;
 
-      // Luồng để xử lý việc trả sách
       std::thread returnThread(
           [&librarySystem, userId, bookId, &success, &returnedBook]() {
             success = librarySystem.returnBook(userId, bookId);
@@ -170,9 +165,8 @@ int main() {
             }
           });
 
-      returnThread.join(); // Chờ luồng trả sách hoàn tất
+      returnThread.join();
 
-      // Luồng để in thông báo
       std::thread printThread([success, returnedBook, bookId]() {
         if (success) {
           std::cout << "Book returned successfully.\n";
@@ -196,12 +190,11 @@ int main() {
         }
       });
 
-      printThread.join(); // Chờ luồng in thông báo hoàn tất
+      printThread.join();
 
       break;
     }
     case 5: {
-      // Search books
       std::string query, type;
 
       std::cout << "Enter search query: ";
